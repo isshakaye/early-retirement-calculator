@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Early Retirement Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      padding: 20px;
+      background: #f0f9ff;
+    }
+    .calculator {
+      background: white;
+      padding: 30px;
+      border-radius: 15px;
+      max-width: 700px;
+      margin: auto;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      color: #555;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      background: #00b894;
+      color: white;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      width: 100%;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #019474;
+    }
+    .result {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: center;
+      color: #333;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="calculator">
+  <h2>Early Retirement Calculator</h2>
+  <label>What is your current age?</label>
+  <input type="number" id="currentAge">
+
+  <label>At what age do you want to retire?</label>
+  <input type="number" id="retirementAge">
+
+  <label>How much have you already saved for retirement?</label>
+  <input type="number" id="currentSavings">
+
+  <label>How much will you save annually moving forward?</label>
+  <input type="number" id="annualSavings">
+
+  <label>How much do you expect to spend each year during retirement?</label>
+  <input type="number" id="annualExpenses">
+
+  <label>Expected annual return on your investments (in %)?</label>
+  <input type="number" id="rateOfReturn" placeholder="e.g., 6">
+
+  <label>Expected annual inflation rate (in %)?</label>
+  <input type="number" id="inflationRate" placeholder="e.g., 2">
+
+  <label>Expected lifespan (age until you live)?</label>
+  <input type="number" id="lifespan">
+
+  <label>Other expected annual income during retirement (e.g., Social Security)?</label>
+  <input type="number" id="otherIncome">
+
+  <button onclick="calculateRetirement()">Calculate</button>
+
+  <div class="result" id="result"></div>
+  <canvas id="savingsChart" width="400" height="200"></canvas>
+</div>
+
+<script>
+function calculateRetirement() {
+  const currentAge = parseInt(document.getElementById('currentAge').value);
+  const retirementAge = parseInt(document.getElementById('retirementAge').value);
+  const currentSavings = parseFloat(document.getElementById('currentSavings').value);
+  const annualSavings = parseFloat(document.getElementById('annualSavings').value);
+  const annualExpenses = parseFloat(document.getElementById('annualExpenses').value);
+  const rateOfReturn = parseFloat(document.getElementById('rateOfReturn').value) / 100;
+  const inflationRate = parseFloat(document.getElementById('inflationRate').value) / 100;
+  const lifespan = parseInt(document.getElementById('lifespan').value);
+  const otherIncome = parseFloat(document.getElementById('otherIncome').value);
+
+  const yearsToRetirement = retirementAge - currentAge;
+  const yearsInRetirement = lifespan - retirementAge;
+
+  // Future value of savings
+  let futureSavings = currentSavings;
+  let yearlyBalances = [];
+
+  for (let i = 0; i < yearsToRetirement; i++) {
+    futureSavings = (futureSavings + annualSavings) * (1 + rateOfReturn);
+    yearlyBalances.push({ year: currentAge + i + 1, balance: futureSavings });
+  }
+
+  // Inflation-adjusted expenses
+  let adjustedAnnualExpenses = annualExpenses * Math.pow(1 + inflationRate, yearsToRetirement);
+
+  // Total amount needed at retirement
+  let totalNeeded = 0;
+  for (let i = 0; i < yearsInRetirement; i++) {
+    totalNeeded += adjustedAnnualExpenses / Math.pow(1 + rateOfReturn, i);
+    adjustedAnnualExpenses *= (1 + inflationRate);
+  }
+
+  let resultText = `\nYou will have approximately $${futureSavings.toFixed(2)} saved by age ${retirementAge}.<br>`;
+  resultText += `You will need approximately $${totalNeeded.toFixed(2)} to retire comfortably.<br>`;
+
+  if (futureSavings >= totalNeeded) {
+    resultText += "🎯 Congratulations! You are on track for early retirement!";
+  } else {
+    const additionalSavings = ((totalNeeded - futureSavings) / yearsToRetirement).toFixed(2);
+    resultText += `⚠️ You need to save an additional $${additionalSavings} per year to reach your goal.`;
+  }
+
+  document.getElementById('result').innerHTML = resultText;
+
+  // Draw the chart
+  const ctx = document.getElementById('savingsChart').getContext('2d');
+  const labels = yearlyBalances.map(entry => entry.year);
+  const data = yearlyBalances.map(entry => entry.balance);
+
+  if (window.myChart instanceof Chart) {
+    window.myChart.destroy();
+  }
+
+  window.myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Projected Savings Over Time',
+        data: data,
+        borderColor: '#00b894',
+        fill: true,
+        backgroundColor: 'rgba(0,184,148,0.2)',
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
